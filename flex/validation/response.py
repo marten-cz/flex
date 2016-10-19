@@ -44,7 +44,10 @@ def validate_status_code_to_response_definition(response, operation_definition):
 
     key = status_code
     if key not in operation_responses:
-        key = 'default'
+        if int(key) not in operation_responses:
+            key = 'default'
+        else:
+            key = int(key)
 
     try:
         response_definition = operation_responses[key]
