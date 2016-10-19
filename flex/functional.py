@@ -40,5 +40,22 @@ def apply_functions_to_key(key, *funcs):
     validator to some specified key in a mapping.
     """
     return chain_reduce_partial(
-        operator.methodcaller('get', key, EMPTY), *funcs
+        methodcaller('get', key, EMPTY), *funcs
     )
+
+
+def attrgetter(attr):
+    """
+    Upstream bug in python:
+    https://bugs.python.org/issue26822
+    """
+    return lambda obj, **kwargs: getattr(obj, attr)
+
+
+def methodcaller(name, *args):
+    """
+    Upstream bug in python:
+    https://bugs.python.org/issue26822
+    """
+    func = operator.methodcaller(name, *args)
+    return lambda obj, **kwargs: func(obj)

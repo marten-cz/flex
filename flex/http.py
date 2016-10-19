@@ -1,5 +1,6 @@
 import six
 
+import io
 import http
 import urllib
 
@@ -8,12 +9,20 @@ import json
 
 from flex.constants import EMPTY
 
-_tornado_available = True
 try:
     import tornado.httpclient
     import tornado.httpserver
 except ImportError:
     _tornado_available = False
+else:
+    _tornado_available = True
+
+try:
+    import falcon  # noqa
+except ImportError:
+    _falcon_available = False
+else:
+    _falcon_available = True
 
 
 class URLMixin(object):
@@ -58,7 +67,7 @@ class Request(URLMixin):
             return self.body
         elif self.body is EMPTY:
             return EMPTY
-        elif self.content_type == 'application/json':
+        elif self.content_type.startswith('application/json'):
             return json.loads(self.body)
         elif self.content_type == 'application/x-www-form-urlencoded':
             return dict(urlparse.parse_qsl(self.body))
@@ -150,11 +159,28 @@ def _normalize_tornado_request(request):
     )
 
 
+def _normalize_falcon_request(request):
+    if not _falcon_available:
+        raise TypeError("Falcon is not installed")
+
+    # Falcon request.stream has to be replaced because it can be read only once
+    request.stream = io.BytesIO(request.stream.read())
+
+    return Request(
+        url=request.url,
+        body=request.stream.getvalue().decode(),
+        method=request.method.lower(),
+        content_type=request.content_type,
+        request=request,
+    )
+
+
 REQUEST_NORMALIZERS = (
     _normalize_python2_urllib_request,
     _normalize_python3_urllib_request,
     _normalize_requests_request,
     _normalize_tornado_request,
+    _normalize_falcon_request,
 )
 
 
